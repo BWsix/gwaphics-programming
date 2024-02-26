@@ -1,0 +1,16 @@
+*
+
+!.gitignore
+!.gitmodules
+!README.md
+!CMakeLists.txt
+!gen_project.sh
+
+!externals/
+!externals/**/*
+
+!framework/
+!framework/**/*
+
+!projects/
+!projects/**/*
