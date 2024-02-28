@@ -1,1 +1,1 @@
-add_subdirectory(weekly_01_glStar)
+add_subdirectory(weekly_project_01_glStar)
