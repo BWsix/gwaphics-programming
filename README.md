@@ -3,20 +3,21 @@
 This repository contains my weekly assignments and projects from an introductory
 computer graphics course focusing on OpenGL.
 
-### Quick start
+## Quick start
 
-working with command line
+### working with command line
 
 ```bash
 git clone https://github.com/BWsix/gwaphics-programming.git
 cd gwaphics-programming
 git submodule init
+git submodule update
 cmake -S . -B build
 cmake --build build -j
 ./build/projects/PROJECT/EXECUTABLE
 ```
 
-working with visual studio
+### working with visual studio
 
 1. Open Visual Studio
 2. In `Get started`, select `Clone a repository`
@@ -24,7 +25,7 @@ working with visual studio
 4. Set root level CMakeLists.txt as Startup item
 5. Run build
 
-### Genereate a new project
+## Genereate a new project
 
 ```bash
 ./gen_project.sh PROJECT_NAME
