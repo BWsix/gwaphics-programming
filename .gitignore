@@ -12,5 +12,8 @@
 !framework/
 !framework/**/*
 
+!library/
+!library/**/*
+
 !projects/
 !projects/**/*
