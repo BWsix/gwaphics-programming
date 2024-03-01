@@ -27,6 +27,7 @@ add_library(imgui
     imgui/backends/imgui_impl_opengl3.h
 )
 target_include_directories(imgui PUBLIC "imgui/")
+target_include_directories(imgui PUBLIC "imgui/backends/")
 target_link_libraries(imgui PRIVATE glfw)
 
 # stb_image
