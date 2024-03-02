@@ -1,10 +1,33 @@
-#include <GLFW/glfw3.h>
+#pragma once 
 
 #include <string>
 
+#include <GLFW/glfw3.h>
+
+#include "input.h"
+
 namespace VInput {
 
-enum class Button { Down, Up, Pressed, Released };
+struct GamepadButton {
+    State state = State::Released;
+    double pressed_at = 0;
+    double released_at = 0;
+};
+
+struct GamepadAxes {
+    float L_X, L_Y, R_X, R_Y, L_Trigger, R_Trigger;
+
+    float& operator[] (size_t idx) { return reinterpret_cast<float*>(this)[idx]; }
+    void update(const GLFWgamepadstate& new_state);
+};
+
+struct GamepadButtons {
+    GamepadButton A, B, X, Y, L_Bumper, R_Bumper, Back, Start, Guide, L_Thumb, R_Thumb, Up, Right, Down, Left;
+    GamepadButton &Cross = A, &Circle = B, &Square = X, &Triangle = Y;
+
+    GamepadButton& operator[] (size_t idx) { return reinterpret_cast<GamepadButton*>(this)[idx]; }
+    void update(const GLFWgamepadstate& state, const GLFWgamepadstate& new_state);
+};
 
 class Gamepad {
     int id;
@@ -15,10 +38,8 @@ public:
     bool available;
     std::string name;
 
-    float axes[6];
-    Button button_state[15];
-    double button_pressed_at[15];
-    double button_released_at[15];
+    GamepadAxes axes;
+    GamepadButtons buttons;
 
     Gamepad();
     ~Gamepad();
