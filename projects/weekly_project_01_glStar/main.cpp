@@ -1,6 +1,3 @@
-#include <iostream>
-#include <cassert>
-
 #define GLFW_INCLUDE_NONE
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
@@ -13,148 +10,33 @@
 
 #define VINPUT_GAMEPAD
 #include <input.h>
+#include <ui.h>
 
-#include "data.h"
-
-float fps = 1;
-float frame_time = 1;
+#include "helpers.h"
+#include "star.hpp"
 
 const char* WINDOW_TITLE = "glStar";
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 600;
 
-const float THICKNESS_OF_STAR = 0.25;
-const float MAGNITUDE_OF_OSCILLATION = 0.3;
-const float OSCILLATION_PER_SECOND = 1;
-const float ROTATION_PER_SECOND = 0.5;
-const float COLOR_TRANSITION_DURATION = 0.5;
+Star star;
+using VInput::gamepad;
 
-class ColorManager {
-    const glm::vec3 DEFAULT_COLOR = {0.8, 0.8, 0};
-    float progress = 1;
-    glm::vec3 prev = DEFAULT_COLOR;
-    glm::vec3 current = DEFAULT_COLOR;
-    glm::vec3 next = DEFAULT_COLOR;
-public:
-    glm::vec3 bright(float intensify = 0) const {
-        return (1.1f + intensify) * current;
-    }
-    glm::vec3 dark(float intensify = 0) const {
-        return (0.3f + 0.3f * intensify) * current;
-    }
-    void update() {
-        current = LERP(prev, next, glm::min<float>(progress, 1));
-        progress += 1 / COLOR_TRANSITION_DURATION * frame_time;
-    }
-    void transform_to(glm::vec3 color) {
-        progress = 0;
-        prev = current;
-        next = color;
-    }
-    void reset() {
-        progress = 1;
-        prev = DEFAULT_COLOR;;
-        current = DEFAULT_COLOR;;
-        next = DEFAULT_COLOR;
-    }
-} color_manager;
-
-void handle_input(GLFWwindow *window) {
-    if (!VInput::gamepad.available) {
-        return;
-    }
-
-    if (VInput::gamepad.buttons.Back.state == VInput::State::Down) {
-        glfwSetWindowShouldClose(window, true);
-    }
+void update() {
+    star.update();
 }
 
-void display(void) {
+void display() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glPushMatrix();
-
-    float now = glfwGetTime();
-
-    // setting up transformation
-    if (VInput::gamepad.available) {
-        float lx = 0.5 * VInput::gamepad.axes.L_X;
-        float ly = -0.5 * VInput::gamepad.axes.L_Y;
-        float lt = 0.5 * (VInput::gamepad.axes.L_Trigger + 1);
-        glTranslatef(lx, ly, lt);
-
-        float rx = VInput::gamepad.axes.R_X;
-        float ry = VInput::gamepad.axes.R_Y;
-        float theta = 60 * rx;
-        float phi = 60 * ry;
-        glRotatef(theta, 0, 1, 0);
-        glRotatef(phi, 1, 0, 0);
-    } else {
-        float s = sin(OSCILLATION_PER_SECOND * now);
-        float y = MAGNITUDE_OF_OSCILLATION * s * s - MAGNITUDE_OF_OSCILLATION / 2;
-        glTranslatef(0, y, 0);
-
-        float r = 360 * now;
-        float theta = ROTATION_PER_SECOND * r;
-        glRotatef(theta, 0, 1, 0);
-    }
-
-    // settings up color
-    if (VInput::gamepad.available) {
-        for (size_t i = 0; i < 4; i++) {
-            if (VInput::gamepad.buttons[i].state == VInput::State::Down) {
-                color_manager.transform_to(COLOR_BUTTON_MAPPING.at(i));
-            }
-        }
-
-        if (VInput::gamepad.buttons.Start.state == VInput::State::Down) {
-            color_manager.reset();
-        }
-
-        color_manager.update();
-    } else {
-        color_manager.reset();
-    }
-
-    float intensify_color = 0.3 * (VInput::gamepad.axes.R_Trigger + 1) / 2;
-
-    // draw calls
-    glBegin(GL_TRIANGLE_FAN);
-    {
-        glColor3fv(glm::value_ptr(color_manager.bright(intensify_color)));
-        glVertex3f(0, 0, THICKNESS_OF_STAR);
-        glColor3fv(glm::value_ptr(color_manager.dark(intensify_color)));
-        for (auto vertex : STAR_VERTICES) {
-            glVertex3fv(glm::value_ptr(vertex));
-        }
-    }
-    glEnd();
-
-    glBegin(GL_TRIANGLE_FAN);
-    {
-        glColor3fv(glm::value_ptr(color_manager.bright(intensify_color)));
-        glVertex3f(0, 0, -THICKNESS_OF_STAR);
-        glColor3fv(glm::value_ptr(color_manager.dark(intensify_color)));
-        for (auto vertex : STAR_VERTICES) {
-            glVertex3fv(glm::value_ptr(vertex));
-        }
-    }
-    glEnd();
-
-    glPopMatrix();
+    star.draw();
 }
 
-void update_ui() {
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-
+void show_info() {
     ImGui::Begin("Info", NULL, ImGuiWindowFlags_AlwaysAutoResize);
-    ImGui::Text("fps: %.0f", fps);
-    ImGui::Text("frametime: %f", frame_time);
-    if (VInput::gamepad.available) {
-        ImGui::Text("Gamepad: %s", VInput::gamepad.name.c_str());
+    ImGui::Text("fps: %.0f", Helper::get_fps());
+    ImGui::Text("frametime: %f", Helper::get_frame_time());
+    if (gamepad.available) {
+        ImGui::Text("Gamepad: %s", gamepad.name.c_str());
         ImGui::Text("Left Stick: movement in xy plane");
         ImGui::Text("Right Stick: rotation");
         ImGui::Text("Left Trigger: movement in z axis");
@@ -166,12 +48,9 @@ void update_ui() {
         ImGui::Text("No gamepad detected: falled back to animation mode");
     }
     ImGui::End();
-
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void windowSizeCallback(GLFWwindow *, int width, int height) {
+void window_resize_callback(GLFWwindow *, int width, int height) {
     if (height == 0) {
         height = 1;
     }
@@ -194,55 +73,31 @@ bool init() {
 }
 
 int main() {
-    assert(glfwInit() && "Failed to initialize GLFW ._.");
-
-    const char* glsl_version = "#version 130";
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-
-    auto *window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE, NULL, NULL);
-    glfwMakeContextCurrent(window);
-    assert(gladLoadGL(glfwGetProcAddress) && "Something went wrong with glad ._.");
-
-    glfwSwapInterval(1);
-
-    int display_w, display_h;
-    glfwGetFramebufferSize(window, &display_w, &display_h);
-    windowSizeCallback(window, display_w, display_h);
-
-    glfwSetWindowSizeCallback(window, windowSizeCallback);
-
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGui::StyleColorsDark();
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init(glsl_version);
+    auto ui = VUI::UI(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE);
+    window_resize_callback(ui.get_window(), WINDOW_WIDTH, WINDOW_HEIGHT);
+    glfwSetWindowSizeCallback(ui.get_window(), window_resize_callback);
 
     init();
-    while (!glfwWindowShouldClose(window)) {
+
+    while (!ui.windowShouldClose()) {
         glfwPollEvents();
-        VInput::gamepad.update();
+        gamepad.update();
 
-        fps = io.Framerate;
-        frame_time = 1.0f / io.Framerate;
+        if (gamepad.buttons.Back.state == VInput::State::Down) {
+            glfwSetWindowShouldClose(ui.get_window(), true);
+        }
 
-        handle_input(window);
+        update();
         display();
-        update_ui();
 
-        glfwSwapBuffers(window);
+        ui.begin_drawing();
+        {
+            show_info();
+        }
+        ui.end_drawing();
+
+        glfwSwapBuffers(ui.get_window());
     }
-
-    ImGui_ImplGlfw_Shutdown();
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui::DestroyContext();
-
-    glfwDestroyWindow(window);
-    glfwTerminate();
 
     return 0;
 }
