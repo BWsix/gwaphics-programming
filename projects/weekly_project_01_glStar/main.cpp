@@ -1,3 +1,4 @@
+#include <iostream>
 #include <cassert>
 
 #define GLFW_INCLUDE_NONE
@@ -26,9 +27,10 @@ const float THICKNESS_OF_STAR = 0.25;
 const float MAGNITUDE_OF_OSCILLATION = 0.3;
 const float OSCILLATION_PER_SECOND = 1;
 const float ROTATION_PER_SECOND = 0.5;
+const float COLOR_TRANSITION_DURATION = 0.5;
 
 class ColorManager {
-    glm::vec3 DEFAULT_COLOR = {0.8, 0.8, 0};
+    const glm::vec3 DEFAULT_COLOR = {0.8, 0.8, 0};
     float progress = 1;
     glm::vec3 prev = DEFAULT_COLOR;
     glm::vec3 current = DEFAULT_COLOR;
@@ -41,8 +43,8 @@ public:
         return (0.3f + 0.3f * intensify) * current;
     }
     void update() {
-        current = LERP(current, next, glm::min<float>(progress, 1));
-        progress += 0.01;
+        current = LERP(prev, next, glm::min<float>(progress, 1));
+        progress += 1 / COLOR_TRANSITION_DURATION * frame_time;
     }
     void transform_to(glm::vec3 color) {
         progress = 0;
@@ -143,16 +145,14 @@ void display(void) {
     glPopMatrix();
 }
 
-void update_ui(ImGuiIO& io) {
+void update_ui() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    fps = io.Framerate;
-    frame_time = 1000.0f / io.Framerate;
-
     ImGui::Begin("Info", NULL, ImGuiWindowFlags_AlwaysAutoResize);
     ImGui::Text("fps: %.0f", fps);
+    ImGui::Text("frametime: %f", frame_time);
     if (VInput::gamepad.available) {
         ImGui::Text("Gamepad: %s", VInput::gamepad.name.c_str());
         ImGui::Text("Left Stick: movement in xy plane");
@@ -199,11 +199,12 @@ int main() {
     const char* glsl_version = "#version 130";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-    glfwSwapInterval(1);
 
     auto *window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE, NULL, NULL);
     glfwMakeContextCurrent(window);
     assert(gladLoadGL(glfwGetProcAddress) && "Something went wrong with glad ._.");
+
+    glfwSwapInterval(1);
 
     int display_w, display_h;
     glfwGetFramebufferSize(window, &display_w, &display_h);
@@ -226,9 +227,12 @@ int main() {
         glfwPollEvents();
         VInput::gamepad.update();
 
+        fps = io.Framerate;
+        frame_time = 1.0f / io.Framerate;
+
         handle_input(window);
         display();
-        update_ui(io);
+        update_ui();
 
         glfwSwapBuffers(window);
     }
